@@ -24,6 +24,11 @@ type Manager struct {
 }
 
 func NewManager(sourceDir, targetDir, progressFile string) *Manager {
+	// 确保目标目录存在
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		log.Printf("创建目标目录失败: %v", err)
+	}
+
 	m := &Manager{
 		sourceDir:    sourceDir,
 		targetDir:    targetDir,

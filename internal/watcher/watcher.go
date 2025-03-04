@@ -79,31 +79,33 @@ func (w *Watcher) addToWatch(dirPath string) error {
 }
 
 func (w *Watcher) Start() error {
-	w.status.IsWatching = true
-	w.status.LastError = nil
-
 	// 检查目录是否存在
 	if _, err := os.Stat(w.sourceDir); err != nil {
+		w.status.IsWatching = false
 		w.status.LastError = err
-		return fmt.Errorf("源目录不存在: %s", w.sourceDir)
+		log.Printf("源目录不存在，等待目录创建或挂载: %s", w.sourceDir)
+	} else {
+		w.status.IsWatching = true
+		w.status.LastError = nil
+
+		// 添加根目录到监控列表
+		if err := w.addToWatch(w.sourceDir); err != nil {
+			w.status.LastError = err
+			return err
+		}
+
+		// 启动文件监控
+		go w.watchFiles()
+
+		// 执行初始目录扫描
+		go w.scanDirectory()
+
+		log.Printf("开始监控目录: %s", w.sourceDir)
 	}
 
-	// 添加根目录到监控列表
-	if err := w.addToWatch(w.sourceDir); err != nil {
-		w.status.LastError = err
-		return err
-	}
-
-	// 启动文件监控
-	go w.watchFiles()
-
-	// 启动定期检查
+	// 无论目录是否存在，都启动定期检查
 	go w.checkDirectory()
 
-	// 执行初始目录扫描
-	go w.scanDirectory()
-
-	log.Printf("开始监控目录: %s", w.sourceDir)
 	return nil
 }
 
@@ -111,6 +113,8 @@ func (w *Watcher) Stop() error {
 	close(w.stopChan)
 	w.watcher.Close()
 	w.status.IsWatching = false
+	// 清空已监控的目录列表
+	w.watchedDirs = sync.Map{}
 	log.Printf("停止监控目录: %s", w.sourceDir)
 	return nil
 }
@@ -155,6 +159,15 @@ func (w *Watcher) watchFiles() {
 			if !ok {
 				return
 			}
+			// 检查源目录是否仍然存在
+			if _, err := os.Stat(w.sourceDir); err != nil {
+				if os.IsNotExist(err) {
+					log.Printf("源目录已断开，停止监控: %s", w.sourceDir)
+					w.Stop()
+					return
+				}
+			}
+
 			// 处理所有文件事件
 			switch {
 			case event.Op&fsnotify.Write == fsnotify.Write:
@@ -194,7 +207,7 @@ func (w *Watcher) watchFiles() {
 }
 
 func (w *Watcher) checkDirectory() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -211,11 +224,33 @@ func (w *Watcher) checkDirectory() {
 }
 
 func (w *Watcher) checkDirectoryExists() error {
+	// 检查源目录是否存在
 	if _, err := os.Stat(w.sourceDir); err != nil {
-		w.status.IsWatching = false
-		w.status.LastError = err
-		return fmt.Errorf("源目录不存在: %s", w.sourceDir)
+		if os.IsNotExist(err) {
+			// 目录不存在，如果正在监控则停止监控
+			if w.status.IsWatching {
+				log.Printf("源目录已断开，停止监控: %s", w.sourceDir)
+				if err := w.Stop(); err != nil {
+					log.Printf("停止监控失败: %v", err)
+				}
+			}
+			w.status.IsWatching = false
+			w.status.LastError = err
+			return nil
+		}
+		return fmt.Errorf("检查源目录失败: %w", err)
 	}
+
+	// 如果目录存在但未在监控中，开始监控
+	if !w.status.IsWatching {
+		log.Printf("检测到源目录已创建或挂载，开始监控: %s", w.sourceDir)
+		// 重新创建 stopChan
+		w.stopChan = make(chan struct{})
+		if err := w.Start(); err != nil {
+			return fmt.Errorf("启动监控失败: %w", err)
+		}
+	}
+
 	return nil
 }
 

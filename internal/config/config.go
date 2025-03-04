@@ -30,10 +30,11 @@ type ProgressConfigItem struct {
 }
 
 func LoadConfig() (*BackupConfig, error) {
-	// 首先从 .env 文件读取配置目录
-	configDir := "C:\\Users\\tuilu\\Documents\\projects\\neo-nas"
+	// 首先从环境变量读取配置目录
+	configDir := os.Getenv("BACKUP_CONFIG_DIR")
 	if configDir == "" {
-		return nil, fmt.Errorf("BACKUP_CONFIG_DIR 环境变量未设置")
+		// 如果环境变量未设置，使用默认目录
+		configDir = "/config"
 	}
 
 	// 确保配置目录存在
