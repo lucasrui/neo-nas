@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  backup:
+    image: ghcr.io/lucasrui/usb-backup:latest
+    volumes:
+      - ${SOURCE_PATH}:/source
+      - ${TARGET_PATH}:/target
+    environment:
+      - SOURCE_DIR=/source
+      - TARGET_DIR=/target
+    restart: unless-stopped

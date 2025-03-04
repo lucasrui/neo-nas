@@ -1,0 +1,29 @@
+# 二进制文件
+/usb-backup
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 测试文件
+*.test
+*.tmp
+
+# 输出文件
+*.out
+
+# IDE 相关
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 依赖目录
+/vendor/
+
+# 备份缓存文件
+.backup-cache 
+
+.backup-progress
+backup-config.json
