@@ -116,8 +116,6 @@ func (w *Watcher) Stop() error {
 	// 清空已监控的目录列表
 	w.watchedDirs = sync.Map{}
 	log.Printf("停止监控目录: %s", w.sourceDir)
-	// 等待下一次挂载
-	go w.checkDirectory()
 	return nil
 }
 
@@ -232,25 +230,44 @@ func (w *Watcher) checkDirectoryExists() error {
 			// 目录不存在，如果正在监控则停止监控
 			if w.status.IsWatching {
 				log.Printf("源目录已断开，停止监控: %s", w.sourceDir)
-				if err := w.Stop(); err != nil {
-					log.Printf("停止监控失败: %v", err)
-				}
+				// 只关闭 watcher，不关闭 stopChan
+				w.watcher.Close()
+				w.status.IsWatching = false
+				// 清空已监控的目录列表
+				w.watchedDirs = sync.Map{}
 			}
-			w.status.IsWatching = false
 			w.status.LastError = err
 			return nil
 		}
 		return fmt.Errorf("检查源目录失败: %w", err)
 	}
 
-	// 如果目录存在但未在监控中，开始监控
+	// 如果目录存在但未在监控中，重新启动监控
 	if !w.status.IsWatching {
-		log.Printf("检测到源目录已创建或挂载，开始监控: %s", w.sourceDir)
-		// 重新创建 stopChan
-		w.stopChan = make(chan struct{})
-		if err := w.Start(); err != nil {
-			return fmt.Errorf("启动监控失败: %w", err)
+		log.Printf("检测到源目录已创建或挂载，重新开始监控: %s", w.sourceDir)
+
+		// 重新创建 fsnotify watcher
+		var err error
+		w.watcher, err = fsnotify.NewWatcher()
+		if err != nil {
+			return fmt.Errorf("创建文件监控器失败: %w", err)
 		}
+
+		// 添加根目录到监控列表
+		if err := w.addToWatch(w.sourceDir); err != nil {
+			return fmt.Errorf("添加目录到监控失败: %w", err)
+		}
+
+		w.status.IsWatching = true
+		w.status.LastError = nil
+
+		// 启动文件监控
+		go w.watchFiles()
+
+		// 执行初始目录扫描
+		go w.scanDirectory()
+
+		log.Printf("已恢复目录监控: %s", w.sourceDir)
 	}
 
 	return nil
@@ -281,14 +298,12 @@ func (w *Watcher) handleFileChange(filePath string, updateTime bool) {
 
 func (w *Watcher) scanDirectory() {
 	log.Printf("开始扫描目录: %s", w.sourceDir)
-	totalFiles := 0
-	totalDirs := 0
 	err := w.scanSubDirectory(w.sourceDir)
 
 	if err != nil {
 		log.Printf("扫描目录失败: %v", err)
 	} else {
-		log.Printf("目录扫描完成: %s, 共处理 %d 个文件和 %d 个目录", w.sourceDir, totalFiles, totalDirs)
+		log.Printf("目录扫描完成: %s", w.sourceDir)
 		// 所有文件处理完成后，更新同步时间
 		w.status.LastSync = time.Now()
 		if err := w.backupMgr.SaveProgress(); err != nil {

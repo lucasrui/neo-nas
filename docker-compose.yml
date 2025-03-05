@@ -2,7 +2,9 @@ version: "3.8"
 
 services:
   backup:
-    image: ghcr.io/lucasrui/neo-nas:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     user: "1002:1001"
     volumes:
       - ./config:/config
