@@ -116,6 +116,8 @@ func (w *Watcher) Stop() error {
 	// 清空已监控的目录列表
 	w.watchedDirs = sync.Map{}
 	log.Printf("停止监控目录: %s", w.sourceDir)
+	// 等待下一次挂载
+	go w.checkDirectory()
 	return nil
 }
 
