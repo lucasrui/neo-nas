@@ -37,9 +37,9 @@ func LoadConfig() (*BackupConfig, error) {
 		configDir = "/config"
 	}
 
-	// 确保配置目录存在
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return nil, fmt.Errorf("创建配置目录失败: %w", err)
+	// 判断配置目录是否存在，不存在直接返回异常
+	if _, err := os.Stat(configDir); err != nil {
+		return nil, fmt.Errorf("配置目录: %s 不存在, %w", configDir, err)
 	}
 
 	// 读取配置文件
@@ -47,15 +47,8 @@ func LoadConfig() (*BackupConfig, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// 如果配置文件不存在，创建默认配置
-			config := &BackupConfig{
-				ConfigDir:    configDir,
-				ProgressFile: filepath.Join(configDir, ".backup-progress"),
-			}
-			if err := config.Save(); err != nil {
-				return nil, err
-			}
-			return config, nil
+			// 如果配置文件不存在，直接返回异常
+			return nil, fmt.Errorf("配置文件: %s 不存在, %w", configPath, err)
 		}
 		return nil, fmt.Errorf("读取配置文件失败: %w", err)
 	}
@@ -67,25 +60,9 @@ func LoadConfig() (*BackupConfig, error) {
 
 	// 确保配置目录和进度文件路径正确
 	config.ConfigDir = configDir
-	if config.ProgressFile == "" {
-		config.ProgressFile = filepath.Join(configDir, ".backup-progress")
-	}
+	config.ProgressFile = filepath.Join(configDir, ".backup-progress")
 
 	return &config, nil
-}
-
-func (c *BackupConfig) Save() error {
-	data, err := json.MarshalIndent(c, "", "  ")
-	if err != nil {
-		return fmt.Errorf("序列化配置失败: %w", err)
-	}
-
-	configPath := filepath.Join(c.ConfigDir, "backup-config.json")
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("保存配置文件失败: %w", err)
-	}
-
-	return nil
 }
 
 func LoadProgress(progressFile string) (*ProgressConfig, error) {

@@ -23,10 +23,11 @@ type Manager struct {
 	progressLock sync.Mutex
 }
 
-func NewManager(sourceDir, targetDir, progressFile string) *Manager {
+func NewManager(sourceDir, targetDir, progressFile string) (*Manager, error) {
 	// 确保目标目录存在
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		log.Printf("创建目标目录失败: %v", err)
+		return nil, err
 	}
 
 	m := &Manager{
@@ -38,8 +39,9 @@ func NewManager(sourceDir, targetDir, progressFile string) *Manager {
 	// 加载上次同步时间
 	if err := m.loadProgress(); err != nil {
 		log.Printf("加载进度文件失败: %v", err)
+		return nil, err
 	}
-	return m
+	return m, nil
 }
 
 func (m *Manager) Backup(sourcePath string) error {
@@ -58,31 +60,9 @@ func (m *Manager) Backup(sourcePath string) error {
 		return fmt.Errorf("获取文件信息失败: %w", err)
 	}
 
-	// 检查源目录是否存在
-	if _, err := os.Stat(m.sourceDir); err != nil {
-		log.Printf("源目录不存在，需要同步: %s", m.sourceDir)
-		// 执行备份
-		if err := m.copyFile(sourcePath, targetPath); err != nil {
-			return fmt.Errorf("复制文件失败: %w", err)
-		}
-		log.Printf("文件备份完成: %s -> %s", sourcePath, targetPath)
-		return nil
-	}
-
 	// 获取对应配置的同步时间
 	lastSyncTime := m.getLastSyncTime()
 	if lastSyncTime != nil {
-		// 再次检查源目录是否存在（以防在检查时间期间目录被移除）
-		if _, err := os.Stat(m.sourceDir); err != nil {
-			log.Printf("源目录已不存在，需要同步: %s", m.sourceDir)
-			// 执行备份
-			if err := m.copyFile(sourcePath, targetPath); err != nil {
-				return fmt.Errorf("复制文件失败: %w", err)
-			}
-			log.Printf("文件备份完成: %s -> %s", sourcePath, targetPath)
-			return nil
-		}
-
 		// 使用修改时间作为判断依据
 		fileTime := fileInfo.ModTime()
 		if fileTime.Before(*lastSyncTime) {

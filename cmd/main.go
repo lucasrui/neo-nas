@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -23,6 +24,11 @@ func NewWatcherManager() *WatcherManager {
 }
 
 func (wm *WatcherManager) AddWatcher(sourceDir, targetDir, progressFile string) error {
+	// 需要校验目录合法性，如果是空字符串，则返回异常
+	if sourceDir == "" || targetDir == "" || progressFile == "" {
+		return fmt.Errorf("目录不能为空")
+	}
+
 	wm.mu.Lock()
 	defer wm.mu.Unlock()
 
@@ -77,45 +83,43 @@ func (wm *WatcherManager) StopAll() {
 	}
 }
 
-func (wm *WatcherManager) GetStatus(sourceDir string) *watcher.DirectoryStatus {
-	wm.mu.RLock()
-	defer wm.mu.RUnlock()
-
-	w, exists := wm.watchers[sourceDir]
-	if !exists {
-		return nil
-	}
-
-	return w.GetStatus()
-}
-
 func main() {
 	log.Println("正在启动 USB 备份程序...")
 
 	// 加载配置
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("加载配置失败: %v", err)
+		log.Fatalf("程序已停止，加载配置失败: %v", err)
+		return
 	}
 	log.Printf("成功加载配置，配置目录: %s", cfg.ConfigDir)
 	log.Printf("已配置 %d 个备份任务:", len(cfg.BackupConfigs))
-	for i, bc := range cfg.BackupConfigs {
-		log.Printf("  任务 %d: %s -> %s", i+1, bc.SourceDir, bc.TargetDir)
-	}
 
 	// 验证配置
 	if len(cfg.BackupConfigs) == 0 {
-		log.Fatal("未配置备份目录")
+		log.Fatal("程序已停止，未配置备份任务")
+		return
+	}
+
+	for i, bc := range cfg.BackupConfigs {
+		log.Printf("  任务 %d: %s -> %s", i+1, bc.SourceDir, bc.TargetDir)
 	}
 
 	// 创建 watcher 管理器
 	wm := NewWatcherManager()
 
-	// 为每个配置创建 watcher
+	// 为每个配置创建 watcher，当所有任务都失败时退出，否则继续
+	allFailed := true
 	for _, backupCfg := range cfg.BackupConfigs {
 		if err := wm.AddWatcher(backupCfg.SourceDir, backupCfg.TargetDir, cfg.ProgressFile); err != nil {
 			log.Printf("添加目录监控失败 %s: %v", backupCfg.SourceDir, err)
+		} else {
+			allFailed = false
 		}
+	}
+	if allFailed {
+		log.Fatal("程序已停止，所有任务都失败")
+		return
 	}
 
 	// 等待中断信号

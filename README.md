@@ -70,6 +70,10 @@ services:
 docker-compose up -d
 ```
 
+### 直接运行
+
+`go run ./cmd/main.go`
+
 ## 配置说明
 
 ### 环境变量
@@ -88,7 +92,8 @@ docker-compose up -d
    - 临时设置（当前会话有效）：
    ```bash
    export BACKUP_CONFIG_DIR="/home/user/config"
-
+   ```
+  
 ### 配置文件格式
 
 配置文件 `config.json` 示例：
