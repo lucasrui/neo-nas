@@ -43,7 +43,7 @@ func LoadConfig() (*BackupConfig, error) {
 	}
 
 	// 读取配置文件
-	configPath := filepath.Join(configDir, "backup-config.json")
+	configPath := filepath.Join(configDir, "config.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {

@@ -1,8 +1,8 @@
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY . .
-RUN go build -o /usb-backup ./cmd/main.go
+RUN go build -o /neo-nas ./cmd/main.go
 
 FROM alpine:latest
-COPY --from=builder /usb-backup /usr/local/bin/
-ENTRYPOINT ["usb-backup"] 
+COPY --from=builder /neo-nas /usr/local/bin/
+ENTRYPOINT ["neo-nas"] 
