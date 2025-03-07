@@ -55,10 +55,9 @@ version: "3"
 services:
   neo-nas:
     image: ghcr.io/lucasrui/neo-nas:latest
-    user: "1002:1001"
     volumes:
       - ./config:/config
-      - /path/to/source:/source
+      - /path/to/source:/source:ro,rslave
       - /path/to/target:/target
     environment:
       - BACKUP_CONFIG_DIR=/config

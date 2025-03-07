@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,22 +19,36 @@ import (
 type Manager struct {
 	sourceDir    string
 	targetDir    string
+	targetUid    int
+	targetGid    int
 	progressFile string
 	progress     *config.ProgressConfig
 	activeOps    sync.WaitGroup
 	progressLock sync.Mutex
 }
 
-func NewManager(sourceDir, targetDir, progressFile string) (*Manager, error) {
+func NewManager(sourceDir, targetDir, targetUser, progressFile string) (*Manager, error) {
 	// 确保目标目录存在
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		log.Printf("创建目标目录失败: %v", err)
 		return nil, err
 	}
 
+	// 从targetUser中解析出uid和gid，格式为uid:gid
+	targetUid, targetGid := 0, 0
+	if targetUser != "" {
+		uidGid := strings.Split(targetUser, ":")
+		if len(uidGid) == 2 {
+			targetUid, _ = strconv.Atoi(uidGid[0])
+			targetGid, _ = strconv.Atoi(uidGid[1])
+		}
+	}
+	
 	m := &Manager{
 		sourceDir:    sourceDir,
 		targetDir:    targetDir,
+		targetUid:    targetUid,
+		targetGid:    targetGid,
 		progressFile: progressFile,
 	}
 
@@ -66,7 +82,6 @@ func (m *Manager) Backup(sourcePath string) error {
 		// 使用修改时间作为判断依据
 		fileTime := fileInfo.ModTime()
 		if fileTime.Before(*lastSyncTime) {
-			log.Printf("跳过旧文件 %s (修改时间: %v, 上次同步: %v)", sourcePath, fileTime, lastSyncTime)
 			return nil
 		}
 	}
@@ -150,6 +165,13 @@ func (m *Manager) copyFile(src, dst string) error {
 		log.Printf("设置目标文件时间失败: %v", err)
 	}
 
+	// 设置目标文件的 UID 和 GID
+	if m.targetUid != 0 || m.targetGid != 0 {
+		if err := os.Chown(dst, m.targetUid, m.targetGid); err != nil {
+			log.Printf("设置目标文件 UID 和 GID 失败: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -222,8 +244,6 @@ func (m *Manager) getLastSyncTime() *time.Time {
 		}
 	}
 
-	// 如果没有找到对应的进度记录，返回 nil 表示需要同步
-	log.Printf("未找到源目录的进度记录，需要同步: %s", m.sourceDir)
 	return nil
 }
 

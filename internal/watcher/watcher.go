@@ -25,7 +25,7 @@ type DirectoryStatus struct {
 	LastSync          time.Time
 }
 
-func NewWatcher(sourceDir, targetDir, progressFile string) (*Watcher, error) {
+func NewWatcher(sourceDir, targetDir, targetUser, progressFile string) (*Watcher, error) {
 	w := &Watcher{
 		sourceDir:    sourceDir,
 		targetDir:    targetDir,
@@ -36,7 +36,7 @@ func NewWatcher(sourceDir, targetDir, progressFile string) (*Watcher, error) {
 
 	// 创建备份管理器
 	var err error
-	w.backupMgr, err = backup.NewManager(sourceDir, targetDir, progressFile)
+	w.backupMgr, err = backup.NewManager(sourceDir, targetDir, targetUser, progressFile)
 
 	return w, err
 }
@@ -80,6 +80,7 @@ func (w *Watcher) checkDirectoryExists() error {
 			return nil
 		}
 		return fmt.Errorf("检查源目录失败: %w", err)
+		// 这里也可以考虑认为源目录不存在了
 	}
 	
 	// 如果目录存在且上次是未挂载，重新启动监控 TODO 可以考虑支持定时备份，暂时用不到

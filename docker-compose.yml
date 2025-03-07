@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    user: "1002:1001"
     volumes:
       - ./config:/config
       - ./sourcetest:/source

@@ -23,7 +23,7 @@ func NewWatcherManager() *WatcherManager {
 	}
 }
 
-func (wm *WatcherManager) AddWatcher(sourceDir, targetDir, progressFile string) error {
+func (wm *WatcherManager) AddWatcher(sourceDir, targetDir, targetUser, progressFile string) error {
 	// 需要校验目录合法性，如果是空字符串，则返回异常
 	if sourceDir == "" || targetDir == "" || progressFile == "" {
 		return fmt.Errorf("目录不能为空")
@@ -38,7 +38,7 @@ func (wm *WatcherManager) AddWatcher(sourceDir, targetDir, progressFile string) 
 	}
 
 	// 创建新的 watcher
-	w, err := watcher.NewWatcher(sourceDir, targetDir, progressFile)
+	w, err := watcher.NewWatcher(sourceDir, targetDir, targetUser, progressFile)
 	if err != nil {
 		return err
 	}
@@ -50,24 +50,6 @@ func (wm *WatcherManager) AddWatcher(sourceDir, targetDir, progressFile string) 
 
 	wm.watchers[sourceDir] = w
 	log.Printf("已添加目录监控: %s", sourceDir)
-	return nil
-}
-
-func (wm *WatcherManager) RemoveWatcher(sourceDir string) error {
-	wm.mu.Lock()
-	defer wm.mu.Unlock()
-
-	w, exists := wm.watchers[sourceDir]
-	if !exists {
-		return nil
-	}
-
-	if err := w.Stop(); err != nil {
-		return err
-	}
-
-	delete(wm.watchers, sourceDir)
-	log.Printf("已移除目录监控: %s", sourceDir)
 	return nil
 }
 
@@ -111,7 +93,7 @@ func main() {
 	// 为每个配置创建 watcher，当所有任务都失败时退出，否则继续
 	allFailed := true
 	for _, backupCfg := range cfg.BackupConfigs {
-		if err := wm.AddWatcher(backupCfg.SourceDir, backupCfg.TargetDir, cfg.ProgressFile); err != nil {
+		if err := wm.AddWatcher(backupCfg.SourceDir, backupCfg.TargetDir, backupCfg.TargetUser, cfg.ProgressFile); err != nil {
 			log.Printf("添加目录监控失败 %s: %v", backupCfg.SourceDir, err)
 		} else {
 			allFailed = false

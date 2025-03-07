@@ -15,8 +15,9 @@ type BackupConfig struct {
 }
 
 type Config struct {
-	SourceDir string `json:"source_dir"` // 源目录
-	TargetDir string `json:"target_dir"` // 目标目录
+	SourceDir  string `json:"source_dir"`  // 源目录
+	TargetDir  string `json:"target_dir"`  // 目标目录
+	TargetUser string `json:"target_user"` // 目标用户
 }
 
 type ProgressConfig struct {
