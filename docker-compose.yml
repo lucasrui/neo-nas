@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./config:/config
-      - ./sourcetest:/source
-      - ./targettest:/target
+      - ./testbackup/config:/config
+      - ./testbackup:/testbackup
     restart: unless-stopped

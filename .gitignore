@@ -25,5 +25,4 @@
 # 备份缓存文件
 .backup-cache 
 
-.backup-progress
-backup-config.json
+/testbackup

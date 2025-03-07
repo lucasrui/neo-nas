@@ -74,7 +74,7 @@ func (w *Watcher) checkDirectoryExists() error {
 	if _, err := os.Stat(w.sourceDir); err != nil {
 		if os.IsNotExist(err) {
 			if w.status.IsLastCheckExists {
-				log.Printf("检测到源目录不存在：%s", w.sourceDir)
+				log.Printf("检测到源目录已离线：%s", w.sourceDir)
 				w.status.IsLastCheckExists = false
 			}
 			return nil
@@ -82,7 +82,7 @@ func (w *Watcher) checkDirectoryExists() error {
 		return fmt.Errorf("检查源目录失败: %w", err)
 		// 这里也可以考虑认为源目录不存在了
 	}
-	
+
 	// 如果目录存在且上次是未挂载，重新启动监控 TODO 可以考虑支持定时备份，暂时用不到
 	if !w.status.IsBackingUp && !w.status.IsLastCheckExists {
 		log.Printf("检测到源目录已创建或挂载，开始监控: %s", w.sourceDir)
@@ -158,12 +158,6 @@ func (w *Watcher) scanSubDirectory(dirPath string) error {
 			mtime := srcInfo.ModTime() // 修改时间
 			if err := os.Chtimes(targetPath, atime, mtime); err != nil {
 				log.Printf("设置目录时间失败: %v", err)
-			}
-
-			// 验证时间是否设置成功
-			if targetInfo, err := os.Stat(targetPath); err == nil {
-				log.Printf("目录时间同步: %s -> %s (源目录时间: %v, 目标目录时间: %v)",
-					path, targetPath, mtime, targetInfo.ModTime())
 			}
 
 			return filepath.SkipDir

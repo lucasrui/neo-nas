@@ -97,12 +97,9 @@ func (m *Manager) Backup(sourcePath string) error {
 
 		// 如果哈希值相同，跳过
 		if sourceHash == targetHash {
-			log.Printf("文件未变化，跳过: %s", sourcePath)
 			return nil
 		}
 		log.Printf("文件已更新，开始备份: %s", sourcePath)
-	} else {
-		log.Printf("目标文件不存在，开始备份: %s", sourcePath)
 	}
 
 	// 执行备份（覆盖已存在的文件）
