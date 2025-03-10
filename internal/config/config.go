@@ -8,16 +8,28 @@ import (
 	"time"
 )
 
-type BackupConfig struct {
-	ConfigDir     string   `json:"config_dir"`     // 配置文件目录
-	BackupConfigs []Config `json:"backup_configs"` // 备份配置列表
-	ProgressFile  string   `json:"progress_file"`  // 进度文件路径
+type NeoConfig struct {
+	ConfigDir     string    `json:"config_dir"`     // 配置文件目录
+	BackupConfigs []Config  `json:"backup_configs"` // 备份配置列表
+	ZipConfig     ZipConfig `json:"zip_config"`     // 压缩配置列表
+	ProgressFile  string    `json:"progress_file"`  // 进度文件路径
 }
 
 type Config struct {
 	SourceDir  string `json:"source_dir"`  // 源目录
 	TargetDir  string `json:"target_dir"`  // 目标目录
 	TargetUser string `json:"target_user"` // 目标用户
+}
+
+type ZipConfig struct {
+	IntervalSeconds int       `json:"interval_seconds"` // 压缩间隔时间
+	Items           []ZipItem `json:"items"`            // 压缩配置列表
+}
+
+type ZipItem struct {
+	Source string `json:"source"` // 源文件
+	Target string `json:"target"` // 目标文件
+	Key    string `json:"key"`    // 密钥
 }
 
 type ProgressConfig struct {
@@ -30,7 +42,7 @@ type ProgressConfigItem struct {
 	ProgressTime time.Time `json:"progress_time"`
 }
 
-func LoadConfig() (*BackupConfig, error) {
+func LoadConfig() (*NeoConfig, error) {
 	// 首先从环境变量读取配置目录
 	configDir := os.Getenv("BACKUP_CONFIG_DIR")
 	if configDir == "" {
@@ -54,7 +66,7 @@ func LoadConfig() (*BackupConfig, error) {
 		return nil, fmt.Errorf("读取配置文件失败: %w", err)
 	}
 
-	var config BackupConfig
+	var config NeoConfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}

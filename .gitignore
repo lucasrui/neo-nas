@@ -1,5 +1,5 @@
 # 二进制文件
-/usb-backup
+/neo-nas
 *.exe
 *.exe~
 *.dll

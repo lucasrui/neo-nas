@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lucasrui/usb-backup/internal/config"
+	"github.com/lucasrui/neo-nas/internal/config"
 )
 
 // 定义备份状态码

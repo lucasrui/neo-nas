@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/lucasrui/usb-backup/internal/backup"
+	"github.com/lucasrui/neo-nas/internal/backup"
 )
 
 type Watcher struct {
@@ -171,7 +171,7 @@ func (w *Watcher) scanSubDirectory(dirPath string) error {
 
 			// 递归处理子目录
 			w.scanSubDirectory(path)
-			
+
 			// 如果是新创建的目录，且里面不存在文件，说明是无效目录，需要删除
 			if isNewDir {
 				// check files count in target path

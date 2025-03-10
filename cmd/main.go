@@ -8,8 +8,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/lucasrui/usb-backup/internal/config"
-	"github.com/lucasrui/usb-backup/internal/watcher"
+	"github.com/lucasrui/neo-nas/internal/config"
+	"github.com/lucasrui/neo-nas/internal/watcher"
+	"github.com/lucasrui/neo-nas/internal/zip"
 )
 
 type WatcherManager struct {
@@ -75,13 +76,9 @@ func main() {
 		return
 	}
 	log.Printf("成功加载配置，配置目录: %s", cfg.ConfigDir)
-	log.Printf("已配置 %d 个备份任务:", len(cfg.BackupConfigs))
 
-	// 验证配置
-	if len(cfg.BackupConfigs) == 0 {
-		log.Fatal("程序已停止，未配置备份任务")
-		return
-	}
+	// 备份相关任务
+	log.Printf("已配置 %d 个备份任务:", len(cfg.BackupConfigs))
 
 	for i, bc := range cfg.BackupConfigs {
 		log.Printf("  任务 %d: %s -> %s", i+1, bc.SourceDir, bc.TargetDir)
@@ -99,6 +96,12 @@ func main() {
 			allFailed = false
 		}
 	}
+
+	// 压缩相关任务，先校验zip配置是否存在
+	if cfg.ZipConfig.IntervalSeconds > 0 {
+		zip.StartZipManager(cfg.ZipConfig)
+	}
+
 	if allFailed {
 		log.Fatal("程序已停止，所有任务都失败")
 		return
