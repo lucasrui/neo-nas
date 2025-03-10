@@ -36,7 +36,16 @@ docker pull ghcr.io/lucasrui/neo-nas:latest
       "source_dir": "/source/foo",
       "target_dir": "/target/bar"
     }
-  ]
+  ],
+  "zip_configs": {
+    "intervalSeconds": 3600, // 压缩间隔时间（秒）
+    "items": [
+      {
+        "source": "/source/foo", // 源文件或文件夹路径
+        "target": "/target/foo.zip" // 压缩文件存放路径
+      }
+    ]
+  }
 }
 ```
 
@@ -77,12 +86,14 @@ docker-compose up -d
 
 ### 环境变量
 
-`BACKUP_CONFIG_DIR` 是程序的核心环境变量，用于指定配置文件所在的目录路径。程序会在该目录下查找 `config.json` 文件。并在该目录下保存同步进度文件。
+`BACKUP_CONFIG_DIR` 是程序的核心环境变量，用于指定配置文件所在的目录路径。程序会在该目录下查找 `config.json` 文件，并在该目录下保存同步进度文件。
 
 #### 环境变量设置方法
 
 1. **Windows 系统**
+
    - 临时设置（当前会话有效）：
+
    ```powershell
    $env:BACKUP_CONFIG_DIR="C:\Users\xxx\config"
    ```
@@ -92,7 +103,7 @@ docker-compose up -d
    ```bash
    export BACKUP_CONFIG_DIR="/home/user/config"
    ```
-  
+
 ### 配置文件格式
 
 配置文件 `config.json` 示例：
@@ -104,7 +115,16 @@ docker-compose up -d
       "source_dir": "源文件夹路径",
       "target_dir": "目标文件夹路径"
     }
-  ]
+  ],
+  "zip_configs": {
+    "intervalSeconds": 3600, // 压缩间隔时间（秒）
+    "items": [
+      {
+        "source": "源文件或文件夹路径",
+        "target": "压缩文件存放路径"
+      }
+    ]
+  }
 }
 ```
 
@@ -122,8 +142,13 @@ docker-compose up -d
    - 支持增量备份，只备份新增或修改的文件
 
 3. **工作文件备份**
+
    - 定期备份工作文件夹到外部存储
    - 保持备份文件的独立性，不受源文件删除影响
+
+4. **定时压缩功能**
+   - 定期压缩指定的文件或文件夹，生成压缩文件
+   - 支持设置压缩间隔时间和密钥（可选）
 
 ## 注意事项
 
