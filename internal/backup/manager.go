@@ -1,8 +1,6 @@
 package backup
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +12,15 @@ import (
 	"time"
 
 	"github.com/lucasrui/usb-backup/internal/config"
+)
+
+// 定义备份状态码
+type BackupStatus int
+
+const (
+	Success BackupStatus = iota
+	Failed
+	Skipped
 )
 
 type Manager struct {
@@ -43,7 +50,7 @@ func NewManager(sourceDir, targetDir, targetUser, progressFile string) (*Manager
 			targetGid, _ = strconv.Atoi(uidGid[1])
 		}
 	}
-	
+
 	m := &Manager{
 		sourceDir:    sourceDir,
 		targetDir:    targetDir,
@@ -60,20 +67,21 @@ func NewManager(sourceDir, targetDir, targetUser, progressFile string) (*Manager
 	return m, nil
 }
 
-func (m *Manager) Backup(sourcePath string) error {
+// 返回一个状态码，用于表示备份结果，可能是成功，失败，或者跳过
+func (m *Manager) Backup(sourcePath string) BackupStatus {
 	m.activeOps.Add(1)
 	defer m.activeOps.Done()
 
 	// 构建目标路径
 	targetPath := m.BuildTargetPath(sourcePath)
 	if targetPath == "" {
-		return fmt.Errorf("无法构建目标路径: %s", sourcePath)
+		return Failed
 	}
 
 	// 获取文件信息
 	fileInfo, err := os.Stat(sourcePath)
 	if err != nil {
-		return fmt.Errorf("获取文件信息失败: %w", err)
+		return Failed
 	}
 
 	// 获取对应配置的同步时间
@@ -82,49 +90,39 @@ func (m *Manager) Backup(sourcePath string) error {
 		// 使用修改时间作为判断依据
 		fileTime := fileInfo.ModTime()
 		if fileTime.Before(*lastSyncTime) {
-			return nil
+			return Skipped
 		}
 	}
 
-	// 检查目标文件是否存在
-	targetHash, err := m.calculateFileHash(targetPath)
+	// 检查目标文件是否存在，如果存在就跳过
+	_, err = os.Stat(targetPath)
 	if err == nil {
-		// 目标文件存在，计算源文件哈希
-		sourceHash, err := m.calculateFileHash(sourcePath)
-		if err != nil {
-			return fmt.Errorf("计算源文件哈希失败: %w", err)
-		}
-
-		// 如果哈希值相同，跳过
-		if sourceHash == targetHash {
-			return nil
-		}
-		log.Printf("文件已更新，开始备份: %s", sourcePath)
+		return Skipped
 	}
 
 	// 执行备份（覆盖已存在的文件）
 	if err := m.copyFile(sourcePath, targetPath); err != nil {
-		return fmt.Errorf("复制文件失败: %w", err)
+		return Failed
 	}
 
 	log.Printf("文件备份完成: %s -> %s", sourcePath, targetPath)
-	return nil
+	return Success
 }
 
-func (m *Manager) calculateFileHash(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
+// func (m *Manager) calculateFileHash(path string) (string, error) {
+// 	file, err := os.Open(path)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	defer file.Close()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
+// 	hash := sha256.New()
+// 	if _, err := io.Copy(hash, file); err != nil {
+// 		return "", err
+// 	}
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
-}
+// 	return hex.EncodeToString(hash.Sum(nil)), nil
+// }
 
 func (m *Manager) copyFile(src, dst string) error {
 	// 打开源文件

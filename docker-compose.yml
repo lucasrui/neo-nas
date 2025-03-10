@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      - TZ=Asia/Shanghai
     volumes:
       - ./testbackup/config:/config
       - ./testbackup:/testbackup
