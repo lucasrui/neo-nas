@@ -27,9 +27,10 @@ type ZipConfig struct {
 }
 
 type ZipItem struct {
-	Source string `json:"source"` // 源文件
-	Target string `json:"target"` // 目标文件
-	Key    string `json:"key"`    // 密钥
+	Source     string `json:"source"`      // 源文件
+	Target     string `json:"target"`      // 目标文件
+	Key        string `json:"key"`         // 密钥
+	TargetUser string `json:"target_user"` // 目标用户（格式：uid:gid）
 }
 
 type ProgressConfig struct {

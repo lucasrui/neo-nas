@@ -113,7 +113,8 @@ docker-compose up -d
   "backup_configs": [
     {
       "source_dir": "源文件夹路径",
-      "target_dir": "目标文件夹路径"
+      "target_dir": "目标文件夹路径",
+      "target_user": "uid:gid" // 可选，指定目标文件的所有者
     }
   ],
   "zip_configs": {
@@ -121,7 +122,9 @@ docker-compose up -d
     "items": [
       {
         "source": "源文件或文件夹路径",
-        "target": "压缩文件存放路径"
+        "target": "压缩文件存放路径",
+        "key": "加密密钥（可选）",
+        "target_user": "uid:gid" // 可选，指定压缩文件的所有者
       }
     ]
   }

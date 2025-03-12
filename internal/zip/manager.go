@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lucasrui/neo-nas/internal/config"
@@ -47,6 +49,7 @@ func (z *ZipManager) Start() {
 func (z *ZipManager) Zip(item config.ZipItem) {
 	// 输入item的日志
 	log.Printf("执行压缩任务，源路径: %s, 目标路径: %s", item.Source, item.Target)
+
 	// 创建压缩文件
 	zipFile, err := os.Create(item.Target)
 	if err != nil {
@@ -124,12 +127,24 @@ func (z *ZipManager) Zip(item config.ZipItem) {
 			log.Printf("复制文件内容到压缩文件失败: %v", err)
 			return
 		}
-
 	}
 
 	if err != nil {
 		log.Printf("压缩文件失败: %v", err)
 		return
+	}
+
+	// 设置压缩文件的所有者
+	if item.TargetUser != "" {
+		// 从targetUser中解析出uid和gid，格式为uid:gid
+		uidGid := strings.Split(item.TargetUser, ":")
+		if len(uidGid) == 2 {
+			targetUid, _ := strconv.Atoi(uidGid[0])
+			targetGid, _ := strconv.Atoi(uidGid[1])
+			if err := os.Chown(item.Target, targetUid, targetGid); err != nil {
+				log.Printf("设置压缩文件所有者失败: %v", err)
+			}
+		}
 	}
 
 	log.Printf("压缩任务完成，源路径: %s, 目标路径: %s", item.Source, item.Target)
