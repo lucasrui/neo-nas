@@ -60,7 +60,6 @@ docker run -v /path/to/config:/config -v /path/to/source:/source -v /path/to/tar
 1. 创建 `docker-compose.yml`：
 
 ```yaml
-version: "3"
 services:
   neo-nas:
     image: ghcr.io/lucasrui/neo-nas:latest
